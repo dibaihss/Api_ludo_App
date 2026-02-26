@@ -1,5 +1,7 @@
 require('dotenv').config();
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const knex = require('knex')({
   client: 'pg',
   connection: {
@@ -8,7 +10,7 @@ const knex = require('knex')({
     database: process.env.DB_NAME || 'ludo',
     user: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || 'password',
-    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
+    ssl: isProduction || process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false
   },
   pool: {
     min: 2,

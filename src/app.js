@@ -6,7 +6,18 @@ const sessionRoutes = require('./routes/sessions');
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = ['http://localhost:8081'];
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('CORS: Origin not allowed'));
+    }
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
