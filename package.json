@@ -9,6 +9,7 @@
     "test": "npm run test:unit",
     "test:unit": "jest --testPathIgnorePatterns=__tests__/integration",
     "test:integration": "jest --runInBand --testMatch \"**/__tests__/integration/**/*.test.js\"",
+    "test:integration:local": "powershell -ExecutionPolicy Bypass -File ./scripts/test-integration-local.ps1",
     "migrate": "knex --knexfile knexfile.js --env development migrate:latest",
     "migrate:test": "knex --knexfile knexfile.js --env test migrate:latest",
     "migrate:rollback": "knex --knexfile knexfile.js --env development migrate:rollback"
@@ -32,7 +33,8 @@
   },
   "devDependencies": {
     "jest": "^29.7.0",
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "supertest": "^7.2.2"
   },
   "type": "commonjs"
 }

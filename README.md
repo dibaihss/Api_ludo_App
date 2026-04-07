@@ -96,8 +96,57 @@ npm run migrate:rollback
 ```bash
 npm run dev      # Development (nodemon)
 npm start        # Start Express server
-npm test         # Run tests
+npm test         # Run unit tests
+npm run test:unit
+npm run test:integration
+npm run test:integration:local  # Run integration tests against local Docker Postgres
 ```
+
+Local integration tests use `docker-compose.integration.yml` and run with automatic setup/teardown through:
+
+```bash
+npm run test:integration:local
+```
+
+---
+
+## Testing and CI
+
+### Unit tests
+
+- Framework: Jest
+- Location: `__tests__/` (excluding `__tests__/integration`)
+- Coverage includes:
+  - guest login JWT response
+  - session create cap checks
+  - session create rate limiter
+
+### Integration tests (real DB)
+
+- Location: `__tests__/integration/**/*.test.js`
+- Uses real PostgreSQL queries via Knex
+- Current integration coverage includes:
+  - session model lifecycle and cleanup
+  - guest login API (`POST /api/guest-login`) response + DB persistence checks
+
+### Local integration test command
+
+`npm run test:integration:local` will:
+
+1. Start `postgres:16` from `docker-compose.integration.yml` on port `5433`
+2. Wait for health check
+3. Run `npm run migrate:test`
+4. Run `npm run test:integration`
+5. Tear down container and volume
+
+Note: On Windows, Docker access may require running terminal as Administrator or ensuring Docker Desktop permissions are available.
+
+### GitHub Actions
+
+- Workflow file: `.github/workflows/ci.yml`
+- Jobs:
+  - `unit-tests`: install deps + run `npm run test:unit`
+  - `integration-tests`: start PostgreSQL service container, run `npm run migrate:test`, then `npm run test:integration`
 
 ---
 

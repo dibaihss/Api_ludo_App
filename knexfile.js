@@ -1,7 +1,8 @@
 require('dotenv').config();
 
 const rawDatabaseUrl = process.env.DATABASE_URL;
-const hasDatabaseUrl = Boolean(rawDatabaseUrl);
+const isDatabaseUrlDisabled = rawDatabaseUrl === 'disabled';
+const hasDatabaseUrl = Boolean(rawDatabaseUrl) && !isDatabaseUrlDisabled;
 const isProduction = process.env.NODE_ENV === 'production';
 
 const isValidDatabaseUrl = (value) => {
