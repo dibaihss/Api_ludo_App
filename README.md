@@ -53,8 +53,12 @@ DB_NAME=postgres
 DB_USER=postgres.your-project-ref
 DB_PASSWORD=your-db-password
 DB_SSL=true
+RESET_DB_ON_START=false
 JWT_SECRET=your-super-secret-jwt-key
 ```
+
+If your password has special characters (like `#`, `@`, `:`), URL-encode it in `DATABASE_URL`.
+Set `RESET_DB_ON_START=true` only in development to drop all migrated tables and recreate them on every server restart.
 
 For Azure Functions local runtime, `local.settings.json` already includes:
 
