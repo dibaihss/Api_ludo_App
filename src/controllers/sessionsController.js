@@ -1,4 +1,16 @@
 const Session = require('../models/Session');
+const authConfig = require('../config/auth');
+
+const ALLOWED_STATUSES = new Set(['waiting', 'in_progress', 'completed']);
+
+const getSessionExpiry = (status) => {
+  const now = new Date();
+  const minutesToAdd = status === 'in_progress'
+    ? authConfig.sessionTtlInProgressMinutes
+    : authConfig.sessionTtlWaitingMinutes;
+
+  return new Date(now.getTime() + minutesToAdd * 60 * 1000);
+};
 
 const sessionsController = {
   async getAllSessions(req, res) {
@@ -25,11 +37,32 @@ const sessionsController = {
   async createSession(req, res) {
     try {
       const { name, status, maxPlayers } = req.body;
+      if (status && !ALLOWED_STATUSES.has(status)) {
+        return res.status(400).json({ message: 'Invalid status value' });
+      }
+
+      const ownerUserId = req.user.userId;
+      const isGuest = Boolean(req.user.isGuest);
+      const activeCap = isGuest
+        ? authConfig.sessionActiveCapGuest
+        : authConfig.sessionActiveCapRegistered;
+      const activeSessionCount = await Session.countActiveByOwner(ownerUserId);
+
+      if (activeSessionCount >= activeCap) {
+        return res.status(429).json({
+          message: `Session limit reached. You can have up to ${activeCap} active sessions.`
+        });
+      }
+
+      const sessionStatus = status || 'waiting';
       const session = await Session.create({
         name,
-        status: status || 'waiting',
+        owner_user_id: ownerUserId,
+        status: sessionStatus,
         max_players: maxPlayers || 4,
-        current_players: 0
+        current_players: 0,
+        expires_at: getSessionExpiry(sessionStatus),
+        last_activity_at: new Date()
       });
 
       res.status(201).json({
@@ -54,10 +87,15 @@ const sessionsController = {
       }
 
       const { name, status, maxPlayers } = req.body;
+      if (status && !ALLOWED_STATUSES.has(status)) {
+        return res.status(400).json({ message: 'Invalid status value' });
+      }
+
       const updatedSession = await Session.update(req.params.id, {
         name: name || session.name,
         status: status || session.status,
-        max_players: maxPlayers || session.max_players
+        max_players: maxPlayers || session.max_players,
+        expires_at: getSessionExpiry(status || session.status)
       });
 
       res.status(200).json({
@@ -119,6 +157,7 @@ const sessionsController = {
       }
 
       await Session.addUser(sessionId, userId);
+      await Session.update(sessionId, { expires_at: getSessionExpiry(session.status) });
 
       res.status(200).json({
         success: true,
@@ -145,6 +184,7 @@ const sessionsController = {
       }
 
       await Session.removeUser(sessionId, userId);
+      await Session.update(sessionId, { expires_at: getSessionExpiry(session.status) });
 
       res.status(200).json({
         success: true,
