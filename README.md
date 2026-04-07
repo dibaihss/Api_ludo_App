@@ -1,22 +1,23 @@
 # Strategic Ludo Game Backend (Node.js)
 
-REST API Backend for Strategic Ludo game with user management, authentication, and game session management.
+REST API backend for Strategic Ludo with user management, authentication, and game session management.
 
 ---
 
 ## Technology Stack
 
 | Layer | Technology |
-|-------|-------------|
+|-------|------------|
 | Runtime | Node.js (LTS) |
-| Language | JavaScript (ES6+) |
-| Framework | Express.js |
+| Language | JavaScript (CommonJS) |
+| API Framework | Express.js |
 | Database | PostgreSQL |
 | Query Builder | Knex.js |
-| Authentication | JWT (jsonwebtoken) |
-| Password Hashing | bcrypt |
-| Validation | express-validator |
-| Environment | dotenv |
+| Authentication | JWT (`jsonwebtoken`) |
+| Password Hashing | `bcrypt` |
+| Validation | `express-validator` |
+| Environment | `dotenv` |
+| Cloud Host Additions | Azure Functions config (`host.json`, `local.settings.json`, `.funcignore`) |
 
 ---
 
@@ -24,6 +25,7 @@ REST API Backend for Strategic Ludo game with user management, authentication, a
 
 - Node.js 18+
 - PostgreSQL (Azure or local)
+- Azure Functions Core Tools v4 (only needed for Azure Functions workflows)
 
 ---
 
@@ -49,19 +51,23 @@ DB_PASSWORD=your-password
 JWT_SECRET=your-super-secret-jwt-key
 ```
 
+For Azure Functions local runtime, `local.settings.json` already includes:
+
+```json
+{
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "node",
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true"
+  }
+}
+```
+
 ---
 
 ## Database Migrations
 
-Run migrations to create tables:
-
 ```bash
 npm run migrate
-```
-
-Rollback migrations:
-
-```bash
 npm run migrate:rollback
 ```
 
@@ -70,10 +76,23 @@ npm run migrate:rollback
 ## Run Commands
 
 ```bash
-npm run dev      # Development (with nodemon)
-npm start        # Production
+npm run dev      # Development (nodemon)
+npm start        # Start Express server
 npm test         # Run tests
 ```
+
+---
+
+## Azure Functions Additions
+
+The project now includes base Azure Functions configuration files:
+
+- `host.json`: Azure Functions host + extension bundle configuration
+- `local.settings.json`: local runtime settings (`FUNCTIONS_WORKER_RUNTIME`, storage setting)
+- `.funcignore`: files excluded during Azure Functions publish
+
+Note: The API currently runs through `Express` (`src/app.js` + `src/server.js`).
+These Azure Functions files are added as platform/deployment groundwork.
 
 ---
 
@@ -110,9 +129,9 @@ npm test         # Run tests
 
 ## Authentication
 
-All protected routes require JWT token in Authorization header:
+All protected routes require JWT token in the Authorization header:
 
-```
+```txt
 Authorization: Bearer <jwt_token>
 ```
 
@@ -120,31 +139,32 @@ Authorization: Bearer <jwt_token>
 
 ## Project Structure
 
-```
+```txt
 ludo-backend/
-├── src/
-│   ├── config/
-│   │   ├── database.js      # Knex configuration
-│   │   └── auth.js          # JWT secret, config
-│   ├── controllers/
-│   │   ├── usersController.js
-│   │   └── sessionsController.js
-│   ├── routes/
-│   │   ├── users.js
-│   │   └── sessions.js
-│   ├── middleware/
-│   │   ├── auth.js          # JWT verification
-│   │   └── rateLimiter.js   # Rate limiting
-│   ├── models/
-│   │   ├── User.js
-│   │   └── Session.js
-│   ├── utils/
-│   │   └── helpers.js
-│   ├── app.js               # Express app setup
-│   └── server.js            # Entry point
-├── migrations/              # Database migrations
-├── knexfile.js
-├── package.json
-├── .env.example
-└── README.md
+|-- src/
+|   |-- config/
+|   |   |-- auth.js
+|   |   `-- database.js
+|   |-- controllers/
+|   |   |-- usersController.js
+|   |   `-- sessionsController.js
+|   |-- middleware/
+|   |   |-- auth.js
+|   |   `-- rateLimiter.js
+|   |-- models/
+|   |   |-- User.js
+|   |   `-- Session.js
+|   |-- routes/
+|   |   |-- users.js
+|   |   `-- sessions.js
+|   |-- app.js
+|   `-- server.js
+|-- migrations/
+|-- host.json
+|-- local.settings.json
+|-- .funcignore
+|-- knexfile.js
+|-- package.json
+|-- .env.example
+`-- README.md
 ```
