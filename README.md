@@ -24,7 +24,7 @@ REST API backend for Strategic Ludo with user management, authentication, and ga
 ## Prerequisites
 
 - Node.js 18+
-- PostgreSQL (Azure or local)
+- PostgreSQL (Supabase or local)
 - Azure Functions Core Tools v4 (only needed for Azure Functions workflows)
 
 ---
@@ -43,11 +43,16 @@ Copy `.env.example` to `.env` and configure:
 
 ```env
 PORT=3000
-DB_HOST=your-azure-postgres-host.postgres.database.azure.com
+# Preferred for Supabase
+DATABASE_URL=postgresql://postgres.your-project-ref:your-db-password@aws-0-region.pooler.supabase.com:6543/postgres
+
+# Fallback (supported for backward compatibility)
+DB_HOST=aws-0-region.pooler.supabase.com
 DB_PORT=5432
-DB_NAME=ludo
-DB_USER=your-username
-DB_PASSWORD=your-password
+DB_NAME=postgres
+DB_USER=postgres.your-project-ref
+DB_PASSWORD=your-db-password
+DB_SSL=true
 JWT_SECRET=your-super-secret-jwt-key
 ```
 
