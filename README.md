@@ -54,11 +54,20 @@ DB_USER=postgres.your-project-ref
 DB_PASSWORD=your-db-password
 DB_SSL=true
 RESET_DB_ON_START=false
+SESSION_CREATE_WINDOW_MS=600000
+SESSION_CREATE_MAX_PER_USER=3
+SESSION_CREATE_MAX_PER_IP=5
+SESSION_ACTIVE_CAP_REGISTERED=3
+SESSION_ACTIVE_CAP_GUEST=1
+SESSION_TTL_WAITING_MINUTES=30
+SESSION_TTL_IN_PROGRESS_MINUTES=240
+SESSION_CLEANUP_INTERVAL_MS=600000
 JWT_SECRET=your-super-secret-jwt-key
 ```
 
 If your password has special characters (like `#`, `@`, `:`), URL-encode it in `DATABASE_URL`.
 Set `RESET_DB_ON_START=true` only in development to drop all migrated tables and recreate them on every server restart.
+Session anti-spam defaults are tuned for small databases and can be adjusted using the `SESSION_*` values above.
 
 For Azure Functions local runtime, `local.settings.json` already includes:
 

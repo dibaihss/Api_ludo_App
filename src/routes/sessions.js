@@ -2,6 +2,7 @@ const express = require('express');
 const { body } = require('express-validator');
 const sessionsController = require('../controllers/sessionsController');
 const authenticateToken = require('../middleware/auth');
+const sessionCreateRateLimiter = require('../middleware/sessionCreateRateLimiter');
 
 const router = express.Router();
 
@@ -13,15 +14,15 @@ router.get('/sessions/status/:status', sessionsController.getSessionsByStatus);
 
 router.get('/sessions/:id', sessionsController.getSessionById);
 
-router.post('/sessions', authenticateToken, [
+router.post('/sessions', authenticateToken, sessionCreateRateLimiter, [
   body('name').notEmpty().withMessage('Name is required'),
-  body('status').optional().isString(),
+  body('status').optional().isIn(['waiting', 'in_progress', 'completed']).withMessage('Invalid status'),
   body('maxPlayers').optional().isInt({ min: 1, max: 4 })
 ], sessionsController.createSession);
 
 router.put('/sessions/:id', authenticateToken, [
   body('name').optional().isString(),
-  body('status').optional().isString(),
+  body('status').optional().isIn(['waiting', 'in_progress', 'completed']).withMessage('Invalid status'),
   body('maxPlayers').optional().isInt({ min: 1, max: 4 })
 ], sessionsController.updateSession);
 
