@@ -7,8 +7,8 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "test": "jest",
-    "migrate": "knex migrate:latest",
-    "migrate:rollback": "knex migrate:rollback"
+    "migrate": "knex --knexfile knexfile.js --env development migrate:latest",
+    "migrate:rollback": "knex --knexfile knexfile.js --env development migrate:rollback"
   },
   "keywords": [
     "ludo",

@@ -137,12 +137,19 @@ const usersController = {
         is_guest: true
       });
 
+      const token = jwt.sign(
+        { userId: user.id, isGuest: true },
+        authConfig.jwtSecret,
+        { expiresIn: authConfig.jwtExpiresIn, algorithm: authConfig.jwtAlgorithm }
+      );
+
       res.status(200).json({
         id: user.id,
         name: user.name,
         status: user.status,
         isGuest: user.is_guest,
-        createdAt: user.created_at
+        createdAt: user.created_at,
+        token
       });
     } catch (error) {
       res.status(500).json({ message: error.message });
