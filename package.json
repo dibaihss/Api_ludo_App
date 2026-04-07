@@ -6,8 +6,11 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "jest",
+    "test": "npm run test:unit",
+    "test:unit": "jest --testPathIgnorePatterns=__tests__/integration",
+    "test:integration": "jest --runInBand --testMatch \"**/__tests__/integration/**/*.test.js\"",
     "migrate": "knex --knexfile knexfile.js --env development migrate:latest",
+    "migrate:test": "knex --knexfile knexfile.js --env test migrate:latest",
     "migrate:rollback": "knex --knexfile knexfile.js --env development migrate:rollback"
   },
   "keywords": [

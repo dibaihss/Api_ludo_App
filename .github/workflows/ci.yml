@@ -22,4 +22,54 @@ jobs:
         run: npm ci
 
       - name: Run unit tests
-        run: npm test
+        run: npm run test:unit
+
+  integration-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ludo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ludo_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: disabled
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: ludo_test
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_SSL: false
+      NODE_ENV: test
+      JWT_SECRET: ci-test-secret
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run migrations on test database
+        run: npm run migrate:test
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+
