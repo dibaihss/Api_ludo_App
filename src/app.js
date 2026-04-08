@@ -7,7 +7,7 @@ const sessionRoutes = require('./routes/sessions');
 
 const app = express();
 
-const allowedOrigins = ['http://localhost:8081'];
+const allowedOrigins = ['http://localhost:8081', "https://strategic.expo.app"];
 
 app.use(
   cors({
