@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const userRoutes = require('./routes/users');
 const sessionRoutes = require('./routes/sessions');
 
@@ -20,6 +21,7 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/static', express.static(path.join(__dirname, '..', 'static')));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Strategic Ludo Game Backend API' });
