@@ -42,8 +42,8 @@ async function startServer() {
     const io = new Server(server, {
       transports: ['websocket', 'transport'],
       cors: {
-        origin: 'localhost:8081',
-        methods: ['GET', 'POST']
+        origin: ['http://localhost:8081', 'https://strategic.expo.app/'],
+        methods: ['GET', 'POST', 'PUT'],
       }
     });
 
