@@ -92,6 +92,27 @@ const Session = {
       .select('users.id', 'users.name', 'users.email', 'users.status', 'users.is_guest', 'users.created_at');
   },
 
+  async findByIdWithUsers(id) {
+    const session = await db('sessions')
+      .where({ id })
+      .where('expires_at', '>', db.fn.now())
+      .first();
+
+    if (!session) {
+      return null;
+    }
+
+    const users = await db('session_users')
+      .join('users', 'session_users.user_id', 'users.id')
+      .where({ session_id: id })
+      .select('users.id', 'users.name', 'users.email', 'users.status', 'users.is_guest', 'users.created_at');
+
+    return {
+      ...session,
+      users
+    };
+  },
+
   async deleteExpiredEmptySessions() {
     return db('sessions')
       .where('expires_at', '<=', db.fn.now())

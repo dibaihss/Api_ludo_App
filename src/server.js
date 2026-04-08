@@ -1,8 +1,14 @@
 require('dotenv').config();
+const http = require('http');
+const { Server } = require('socket.io');
 const app = require('./app');
 const knex = require('./config/database');
 const Session = require('./models/Session');
 const authConfig = require('./config/auth');
+const DataClient = require('./socket/data-client');
+const { registerCreateItemHandler } = require('./socket/create-item-handler');
+const { registerMessageHandler } = require('./socket/message-handler');
+const { registerSessionWebsocketHandlers } = require('./socket/session-websocket-handler');
 
 const PORT = process.env.PORT || 3000;
 const shouldResetDbOnStart = process.env.RESET_DB_ON_START === 'true';
@@ -32,7 +38,36 @@ async function startServer() {
     cleanupTimer = setInterval(runSessionCleanup, authConfig.sessionCleanupIntervalMs);
     cleanupTimer.unref();
 
-    app.listen(PORT, () => {
+    const server = http.createServer(app);
+    const io = new Server(server, {
+      transports: ['websocket', 'transport'],
+      cors: {
+        origin: ['http://localhost:8081', 'https://strategic.expo.app/'],
+        methods: ['GET', 'POST', 'PUT'],
+      }
+    });
+
+    io.on('connection', (socket) => {
+      console.log(`Connected: ${socket.id}`);
+
+      socket.on('start', async () => {
+        try {
+          await DataClient.start((message) => io.emit('new_message', message));
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          io.emit('new_message', `Error:\t${errorMessage}`);
+        }
+      });
+
+      registerCreateItemHandler(io, socket, DataClient);
+      registerMessageHandler(socket, (message) => io.emit('new_message', message));
+      registerSessionWebsocketHandlers(io, socket);
+    });
+
+    io.on('error', (_, error) => console.log(`Error: ${error}`));
+    io.on('disconnect', (_, reason) => console.log(`Disconnected: ${reason}`));
+
+    server.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
   } catch (error) {
