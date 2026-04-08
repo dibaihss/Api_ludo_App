@@ -13,6 +13,7 @@ router.get('/sessions/available', sessionsController.getAvailableSessions);
 router.get('/sessions/status/:status', sessionsController.getSessionsByStatus);
 
 router.get('/sessions/:id', sessionsController.getSessionById);
+router.get('/sessions/:id/with-users', sessionsController.getSessionWithUsers);
 
 router.post('/sessions', authenticateToken, sessionCreateRateLimiter, [
   body('name').notEmpty().withMessage('Name is required'),

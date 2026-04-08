@@ -34,6 +34,18 @@ const sessionsController = {
     }
   },
 
+  async getSessionWithUsers(req, res) {
+    try {
+      const sessionWithUsers = await Session.findByIdWithUsers(req.params.id);
+      if (!sessionWithUsers) {
+        return res.status(404).json({ message: 'Session not found' });
+      }
+      res.status(200).json(sessionWithUsers);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
   async createSession(req, res) {
     try {
       const { name, status, maxPlayers } = req.body;

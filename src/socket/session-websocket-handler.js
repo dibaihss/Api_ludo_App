@@ -44,6 +44,7 @@ const registerSessionWebsocketHandlers = (io, socket) => {
     }
 
     match = event.match(/^\/?app\/waitingRoom\.gameStarted\/([^/]+)$/);
+    console.log('Received event:', event, 'with payload:', payload);
     if (match) {
       emitTopic(io, `/topic/gameStarted/${match[1]}`, payload);
       return;
