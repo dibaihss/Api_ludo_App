@@ -102,6 +102,8 @@ npm run test:integration
 npm run test:integration:local  # Run integration tests against local Docker Postgres
 ```
 
+If the configured PostgreSQL instance is unreachable during a local interactive `npm start` or `npm run dev`, the server now offers to start a disposable Docker PostgreSQL container for that run and automatically applies migrations before listening.
+
 Local integration tests use `docker-compose.integration.yml` and run with automatic setup/teardown through:
 
 ```bash

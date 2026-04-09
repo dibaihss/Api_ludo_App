@@ -1,20 +1,14 @@
 require('dotenv').config();
-const http = require('http');
+const http = require('node:http');
 const { Server } = require('socket.io');
-const app = require('./app');
-const knex = require('./config/database');
-const Session = require('./models/Session');
 const authConfig = require('./config/auth');
-const DataClient = require('./socket/data-client');
-const { registerCreateItemHandler } = require('./socket/create-item-handler');
-const { registerMessageHandler } = require('./socket/message-handler');
-const { registerSessionWebsocketHandlers } = require('./socket/session-websocket-handler');
+const { ensureDatabaseReady, formatErrorMessage } = require('./startup/localPostgresBootstrap');
 
 const PORT = process.env.PORT || 3000;
 const shouldResetDbOnStart = process.env.RESET_DB_ON_START === 'true';
 let cleanupTimer = null;
 
-const runSessionCleanup = async () => {
+const runSessionCleanup = async (Session) => {
   try {
     const deletedCount = await Session.deleteExpiredEmptySessions();
     if (deletedCount > 0) {
@@ -26,7 +20,21 @@ const runSessionCleanup = async () => {
 };
 
 async function startServer() {
+  let knex = null;
+  let shutdownLocalPostgres = null;
+  let server = null;
+
   try {
+    ({ shutdownLocalPostgres } = await ensureDatabaseReady());
+
+    const app = require('./app');
+    knex = require('./config/database');
+    const Session = require('./models/Session');
+    const DataClient = require('./socket/data-client');
+    const { registerCreateItemHandler } = require('./socket/create-item-handler');
+    const { registerMessageHandler } = require('./socket/message-handler');
+    const { registerSessionWebsocketHandlers } = require('./socket/session-websocket-handler');
+
     if (shouldResetDbOnStart) {
       console.warn('RESET_DB_ON_START=true detected. Dropping all migrated tables and recreating schema...');
       await knex.migrate.rollback(undefined, true);
@@ -34,15 +42,17 @@ async function startServer() {
       console.log('Database schema reset complete.');
     }
 
-    await runSessionCleanup();
-    cleanupTimer = setInterval(runSessionCleanup, authConfig.sessionCleanupIntervalMs);
+    await runSessionCleanup(Session);
+    cleanupTimer = setInterval(() => {
+      void runSessionCleanup(Session);
+    }, authConfig.sessionCleanupIntervalMs);
     cleanupTimer.unref();
 
-    const server = http.createServer(app);
+    server = http.createServer(app);
     const io = new Server(server, {
       transports: ['websocket', 'transport'],
       cors: {
-        origin: ['http://localhost:8081', 'https://strategic.expo.app/'],
+        origin: ['http://localhost:8081', 'http://localhost:8083', 'https://strategic.expo.app/'],
         methods: ['GET', 'POST', 'PUT'],
       }
     });
@@ -67,11 +77,64 @@ async function startServer() {
     io.on('error', (_, error) => console.log(`Error: ${error}`));
     io.on('disconnect', (_, reason) => console.log(`Disconnected: ${reason}`));
 
-    server.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
+    let isShuttingDown = false;
+    const shutdown = async (signal) => {
+      if (isShuttingDown) {
+        return;
+      }
+
+      isShuttingDown = true;
+
+      if (signal) {
+        console.log(`Received ${signal}. Shutting down...`);
+      }
+
+      if (cleanupTimer) {
+        clearInterval(cleanupTimer);
+        cleanupTimer = null;
+      }
+
+      if (server) {
+        await new Promise((resolve) => {
+          server.close(() => resolve());
+        });
+      }
+
+      if (knex) {
+        await knex.destroy();
+      }
+
+      if (shutdownLocalPostgres) {
+        await shutdownLocalPostgres();
+      }
+
+      process.exit(0);
+    };
+
+    process.once('SIGINT', () => {
+      void shutdown('SIGINT');
     });
+
+    process.once('SIGTERM', () => {
+      void shutdown('SIGTERM');
+    });
+
+    await new Promise((resolve) => {
+      server.listen(PORT, resolve);
+    });
+    console.log(`Server is running on port ${PORT}`);
   } catch (error) {
-    console.error('Server startup failed:', error.message);
+    console.error('Server startup failed:', formatErrorMessage(error));
+    if (cleanupTimer) {
+      clearInterval(cleanupTimer);
+      cleanupTimer = null;
+    }
+    if (knex) {
+      await knex.destroy().catch(() => {});
+    }
+    if (shutdownLocalPostgres) {
+      await shutdownLocalPostgres().catch(() => {});
+    }
     process.exit(1);
   }
 }
