@@ -128,9 +128,9 @@ const usersController = {
 
   async guestLogin(req, res) {
     try {
-      const randomName = 'Guest_' + Math.random().toString(36).substring(2, 10);
+ 
       const user = await User.create({
-        name: randomName,
+        name: req.body.name || `Guest_${Date.now()}`,
         email: null,
         password: null,
         status: true,
