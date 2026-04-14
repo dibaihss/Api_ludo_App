@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  ludo-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ludo-api:latest
+    container_name: ludo-api
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+    restart: unless-stopped
