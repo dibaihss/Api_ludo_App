@@ -53,6 +53,6 @@ jobs:
         run: |
           aws ecs update-service \
             --cluster default \
-            --service ludo-api-cf03 \
+            --service --service ludo-api-8fc8 \
             --force-new-deployment \
             --region ${{ env.AWS_REGION }}
