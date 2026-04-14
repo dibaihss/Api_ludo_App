@@ -29,7 +29,8 @@ const buildConnection = (env = process.env) => {
   if (useDatabaseUrl) {
     return {
       connectionString: rawDatabaseUrl,
-      ssl: useSsl ? { rejectUnauthorized: false } : false
+      ssl: useSsl ? { rejectUnauthorized: false } : false,
+      family: 4  // ← add this line
     };
   }
 
