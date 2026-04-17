@@ -22,8 +22,9 @@ const registerSessionWebsocketHandlers = (io, socket) => {
   const chatAddUser = (rawPayload) => {
     const payload = rawPayload || {};
     const username = toFirstNonEmptyUsername(payload);
+    console.log('Adding user with payload:', payload);
     if (username) {
-      socket.data.username = username;
+      socket.data = payload;
     }
     emitTopic(io, '/topic/public', payload);
   };
@@ -70,16 +71,18 @@ const registerSessionWebsocketHandlers = (io, socket) => {
     }
   });
 
-  socket.on('disconnect', () => {
-    const username = socket.data.username;
-    if (typeof username === 'string' && username.trim().length > 0) {
-      emitTopic(io, '/topic/public', {
-        sender: username,
-        type: 'LEAVE',
-        content: `${username} disconnected`
-      });
-    }
-  });
+socket.on('disconnect', () => {
+  const username = socket.data.username;
+  console.log('User disconnected:', socket.data);
+
+    console.log('Emitting userDisconnected for:', socket.data.sessionId);// undefined
+    emitTopic(io, `/topic/playerMove/${socket.data.sessionId}`, {
+      sender: username,
+      type: 'userDisconnected',        // ← match your frontend handler
+      userId: socket.data.userId,       // ← add userId so frontend can filter
+      content: `${username} disconnected`  // ← was socket.data (object), now username
+    });
+});
 };
 
 module.exports = { registerSessionWebsocketHandlers };

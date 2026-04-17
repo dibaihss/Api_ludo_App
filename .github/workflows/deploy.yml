@@ -52,7 +52,7 @@ jobs:
       - name: Trigger ECS Express Deployment
         run: |
           aws ecs update-service \
-            --cluster humble-parrot-23dkqn \
-            --service ludo-api-221b \
+            --cluster default \
+            --service ludo-api-c0f0 \
             --force-new-deployment \
             --region ${{ env.AWS_REGION }}

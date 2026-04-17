@@ -18,6 +18,8 @@ router.post('/users', [
 
 router.delete('/users/:id', authenticateToken, usersController.deleteUser);
 
+router.delete('/guest-users/:id', usersController.deleteUser);
+
 router.put('/users/:id/status', authenticateToken, [
   body('status').isBoolean().withMessage('Status must be a boolean')
 ], usersController.updateUserStatus);
