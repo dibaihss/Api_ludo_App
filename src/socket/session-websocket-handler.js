@@ -72,7 +72,7 @@ const registerSessionWebsocketHandlers = (io, socket) => {
   });
 
 socket.on('disconnect', () => {
-  const username = socket.data.username;
+  const username = socket.data.sender;
   console.log('User disconnected:', socket.data);
 
     console.log('Emitting userDisconnected for:', socket.data.sessionId);// undefined

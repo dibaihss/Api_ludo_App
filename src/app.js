@@ -2,19 +2,19 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { isAllowedOrigin } = require('./config/cors');
 const userRoutes = require('./routes/users');
 const sessionRoutes = require('./routes/sessions');
 
 const app = express();
 
-const allowedOrigins = ['http://localhost:8081', "https://strategic.expo.app"];
-
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (isAllowedOrigin(origin)) {
         return callback(null, true);
       }
+      console.warn(`[CORS BLOCKED] Origin: "${origin}"`);
       return callback(new Error('CORS: Origin not allowed'));
     }
   })

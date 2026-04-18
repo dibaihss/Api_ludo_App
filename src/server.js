@@ -2,6 +2,7 @@ require('dotenv').config();
 const http = require('node:http');
 const { Server } = require('socket.io');
 const authConfig = require('./config/auth');
+const { allowedOrigins } = require('./config/cors');
 const { ensureDatabaseReady, formatErrorMessage } = require('./startup/localPostgresBootstrap');
 
 const PORT = process.env.PORT || 3000;
@@ -52,7 +53,7 @@ async function startServer() {
     const io = new Server(server, {
       transports: ['websocket', 'transport'],
       cors: {
-        origin: ['http://localhost:8081', 'http://localhost:8083', 'https://strategic.expo.app/'],
+        origin: allowedOrigins,
         methods: ['GET', 'POST', 'PUT'],
       }
     });
