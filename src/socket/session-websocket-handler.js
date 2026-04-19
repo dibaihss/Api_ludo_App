@@ -6,6 +6,7 @@ const {
   recordNotification,
   recordPlayerMove,
   registerParticipant,
+  storePlayerColors,
 } = require('./session-state-service');
 
 const toFirstNonEmptyUsername = (payload) => {
@@ -102,6 +103,19 @@ const handlePlayerMove = async (io, socket, matchId, payload, callback) => {
     }
   }
 
+  // ── color ownership check ──────────────────────────────────────────
+  const claimedColor = payload?.payload?.color;
+  if (claimedColor) {
+    const sessionState = getOrCreateState(matchId);
+    if (sessionState.playerColors) {
+      const ownerUserId = sessionState.playerColors[claimedColor];
+      if (ownerUserId && String(ownerUserId) !== String(payload.userId)) {
+        safeCallback(callback, { status: 'error', reason: 'not_your_color' });
+        return true;
+      }
+    }
+  }
+
   registerParticipant(matchId, {
     ...(isObject(payload) ? payload : {}),
     sessionId: isObject(payload) && payload.sessionId ? payload.sessionId : matchId,
@@ -130,8 +144,15 @@ const routeDynamicEvent = async (io, socket, event, payload, callback) => {
   match = event.match(/^\/?app\/waitingRoom\.gameStarted\/([^/]+)$/);
   console.log('Received event:', event, 'with payload:', payload);
   if (match) {
-    recordGameStarted(match[1], payload);
-    emitTopic(io, `/topic/gameStarted/${match[1]}`, payload);
+    const matchId = match[1];
+
+    // Store playerColors mapping sent by the host when the game starts
+    if (isObject(payload) && payload.type === 'startGame' && isObject(payload.playerColors)) {
+      storePlayerColors(matchId, payload.playerColors);
+    }
+
+    recordGameStarted(matchId, payload);
+    emitTopic(io, `/topic/gameStarted/${matchId}`, payload);
     ackOk(callback);
     return true;
   }

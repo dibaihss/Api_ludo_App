@@ -207,6 +207,7 @@ const createDefaultState = (sessionId) => ({
   lastNotification: null,
   lastEvent: null,
   participants: {},
+  playerColors: null,
   snapshot: {
     activePlayer: 'blue',
     currentPlayer: null,
@@ -305,6 +306,12 @@ const recordPlayerMove = (sessionId, payload) => updateState(sessionId, (state) 
   lastMove: payload || null,
   lastEvent: payload || null,
 }));
+
+const storePlayerColors = (sessionId, playerColors) => {
+  if (!playerColors || typeof playerColors !== 'object' || Array.isArray(playerColors)) return;
+
+  updateState(sessionId, (state) => ({ ...state, playerColors }));
+};
 
 const recordNotification = (sessionId, payload) => updateState(sessionId, (state) => ({
   ...state,
@@ -416,4 +423,5 @@ module.exports = {
   recordNotification,
   recordPlayerMove,
   registerParticipant,
+  storePlayerColors,
 };
