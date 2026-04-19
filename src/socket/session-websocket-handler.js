@@ -1,3 +1,12 @@
+const {
+  getGameState,
+  recordCurrentPlayer,
+  recordGameStarted,
+  recordNotification,
+  recordPlayerMove,
+  registerParticipant,
+} = require('./session-state-service');
+
 const toFirstNonEmptyUsername = (payload) => {
   const candidates = [payload.sender, payload.username, payload.name];
   for (const value of candidates) {
@@ -51,6 +60,10 @@ const updateSocketDataFromNotification = (socket, matchId, payload) => {
 };
 
 const handlePlayerMove = (io, socket, matchId, payload, callback) => {
+  if (isObject(payload) && !socket.data.userId && payload.userId) {
+    socket.data.userId = payload.userId;
+  }
+
   if (isObject(payload) && payload.userId !== socket.data.userId) {
     safeCallback(callback, { status: 'error', reason: 'not_your_turn' });
     return true;
@@ -59,6 +72,13 @@ const handlePlayerMove = (io, socket, matchId, payload, callback) => {
   if (isObject(payload) && payload.sessionId) {
     socket.data.sessionId = payload.sessionId;
   }
+
+  registerParticipant(matchId, {
+    ...(isObject(payload) ? payload : {}),
+    sessionId: isObject(payload) && payload.sessionId ? payload.sessionId : matchId,
+    userId: isObject(payload) ? payload.userId : socket.data.userId,
+  });
+  recordPlayerMove(matchId, payload);
 
   emitTopic(io, `/topic/playerMove/${matchId}`, payload);
   ackOk(callback);
@@ -76,6 +96,7 @@ const routeDynamicEvent = (io, socket, event, payload, callback) => {
   match = event.match(/^\/?app\/waitingRoom\.gameStarted\/([^/]+)$/);
   console.log('Received event:', event, 'with payload:', payload);
   if (match) {
+    recordGameStarted(match[1], payload);
     emitTopic(io, `/topic/gameStarted/${match[1]}`, payload);
     ackOk(callback);
     return true;
@@ -83,6 +104,7 @@ const routeDynamicEvent = (io, socket, event, payload, callback) => {
 
   match = event.match(/^\/?app\/player\.getPlayer\/([^/]+)$/);
   if (match) {
+    recordCurrentPlayer(match[1], payload);
     emitTopic(io, `/topic/currentPlayer/${match[1]}`, payload);
     ackOk(callback);
     return true;
@@ -97,7 +119,10 @@ const routeDynamicEvent = (io, socket, event, payload, callback) => {
   if (match) {
     const matchId = match[1];
     updateSocketDataFromNotification(socket, matchId, payload);
-    emitTopic(io, `/topic/gameStarted/${matchId}`, normalizeNotificationPayload(payload));
+    registerParticipant(matchId, payload);
+    const normalizedPayload = normalizeNotificationPayload(payload);
+    recordNotification(matchId, normalizedPayload);
+    emitTopic(io, `/topic/gameStarted/${matchId}`, normalizedPayload);
     ackOk(callback);
     return true;
   }
@@ -140,6 +165,15 @@ const registerSessionWebsocketHandlers = (io, socket) => {
       socket.data.userId = payload.userId || payload.id || null;
       socket.data.sessionId = payload.sessionId || payload.matchId || null;
 
+      if (socket.data.sessionId) {
+        registerParticipant(socket.data.sessionId, {
+          sender: socket.data.sender,
+          username: socket.data.username,
+          userId: socket.data.userId,
+          sessionId: socket.data.sessionId,
+        });
+      }
+
       console.log('socket.data after chatAddUser:', socket.data);
 
       emitTopic(io, '/topic/public', payload);
@@ -158,6 +192,41 @@ const registerSessionWebsocketHandlers = (io, socket) => {
   };
   socket.on('/app/chat.addUser', chatAddUser);
   socket.on('chat.addUser', chatAddUser);
+
+  const requestGameState = async (rawPayload, callback) => {
+    try {
+      const payload = isObject(rawPayload) ? rawPayload : {};
+      const sessionId = payload.sessionId || socket.data.sessionId;
+
+      if (!sessionId) {
+        safeCallback(callback, { status: 'error', reason: 'missing_session_id' });
+        return;
+      }
+
+      socket.data.sessionId = sessionId;
+
+      if (payload.userId && !socket.data.userId) {
+        socket.data.userId = payload.userId;
+      }
+      if (payload.sender && !socket.data.sender) {
+        socket.data.sender = payload.sender;
+      }
+
+      registerParticipant(sessionId, {
+        ...payload,
+        sessionId,
+        userId: payload.userId || socket.data.userId,
+        sender: payload.sender || socket.data.sender,
+      });
+
+      const gameState = await getGameState(sessionId);
+      safeCallback(callback, { status: 'ok', gameState });
+    } catch (err) {
+      console.error('requestGameState error:', err);
+      safeCallback(callback, { status: 'error', reason: err.message });
+    }
+  };
+  socket.on('requestGameState', requestGameState);
 
   const boardGetPos = (payload, callback) => {
     try {
