@@ -189,10 +189,18 @@ const sessionsController = {
   async removeUserFromSession(req, res) {
     try {
       const { sessionId, userId } = req.params;
+      const requesterId = req.user?.userId;
       
       const session = await Session.findById(sessionId);
       if (!session) {
         return res.status(404).json({ message: 'Session not found' });
+      }
+
+      const isSelfRemoval = String(requesterId) === String(userId);
+      const isOwner = String(session.owner_user_id) === String(requesterId);
+
+      if (!isSelfRemoval && !isOwner) {
+        return res.status(403).json({ message: 'Only the session owner can remove another player' });
       }
 
       await Session.removeUser(sessionId, userId);
