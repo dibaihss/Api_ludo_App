@@ -293,7 +293,10 @@ const recordCurrentPlayer = (sessionId, payload) => updateState(sessionId, (stat
   snapshot: deriveNextSnapshot(state, payload, {
     currentPlayer: normalizeSoldier(payload) || state.snapshot.currentPlayer,
     activePlayer: payload?.color || state.snapshot.activePlayer,
-    stateVersion: state.snapshot.stateVersion + 1,
+    // stateVersion intentionally NOT incremented — player selection is informational,
+    // not a game state mutation. Incrementing here causes the bot's subsequent
+    // player.Move to always arrive with a stale version.
+    stateVersion: state.snapshot.stateVersion,
   }),
   lastEvent: payload || null,
 }));
