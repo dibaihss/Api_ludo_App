@@ -158,7 +158,7 @@ const normalizeStatus = (status, started = false) => {
 
 const toSnapshot = (previousSnapshot, snapshotLike = {}) => {
   const fallbackSnapshot = previousSnapshot || {
-    activePlayer: 'blue',
+    activePlayer: 'green',
     currentPlayer: null,
     timeRemaining: 35,
     isTimerRunning: false,
