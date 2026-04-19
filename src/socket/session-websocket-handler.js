@@ -1,5 +1,6 @@
 const {
   getGameState,
+  getOrCreateState,
   recordCurrentPlayer,
   recordGameStarted,
   recordNotification,
@@ -33,6 +34,12 @@ const ackOk = (callback) => {
   safeCallback(callback, { status: 'ok' });
 };
 
+const emitAuthoritativeGameState = async (io, matchId) => {
+  const gameState = await getGameState(matchId);
+  emitTopic(io, `/topic/gameState/${matchId}`, gameState);
+  return gameState;
+};
+
 const normalizeNotificationPayload = (payload) => (
   isObject(payload)
     ? payload
@@ -59,7 +66,7 @@ const updateSocketDataFromNotification = (socket, matchId, payload) => {
   }
 };
 
-const handlePlayerMove = (io, socket, matchId, payload, callback) => {
+const handlePlayerMove = async (io, socket, matchId, payload, callback) => {
   if (isObject(payload) && !socket.data.userId && payload.userId) {
     socket.data.userId = payload.userId;
   }
@@ -73,19 +80,46 @@ const handlePlayerMove = (io, socket, matchId, payload, callback) => {
     socket.data.sessionId = payload.sessionId;
   }
 
+  // ── stateVersion validation ────────────────────────────────────────
+  const clientVersion = isObject(payload?.gameState)
+    ? payload.gameState.stateVersion
+    : undefined;
+  if (typeof clientVersion === 'number') {
+    const serverState = getOrCreateState(matchId);
+    const serverVersion = serverState.snapshot.stateVersion;
+    if (clientVersion !== serverVersion) {
+      console.warn(
+        `Stale state from ${payload.userId}: client v${clientVersion} server v${serverVersion}`
+      );
+      // Broadcast authoritative state to ALL clients so everyone resyncs
+      await emitAuthoritativeGameState(io, matchId);
+      safeCallback(callback, {
+        status: 'error',
+        reason: 'stale_state',
+        serverVersion,
+      });
+      return true;
+    }
+  }
+
   registerParticipant(matchId, {
     ...(isObject(payload) ? payload : {}),
     sessionId: isObject(payload) && payload.sessionId ? payload.sessionId : matchId,
     userId: isObject(payload) ? payload.userId : socket.data.userId,
   });
-  recordPlayerMove(matchId, payload);
+  const updatedState = recordPlayerMove(matchId, payload);
+  const newVersion = updatedState.snapshot.stateVersion;
 
-  emitTopic(io, `/topic/playerMove/${matchId}`, payload);
-  ackOk(callback);
+  // Augment broadcast with server's new stateVersion
+  emitTopic(io, `/topic/playerMove/${matchId}`, {
+    ...(isObject(payload) ? payload : {}),
+    stateVersion: newVersion,
+  });
+  safeCallback(callback, { status: 'ok', newVersion });
   return true;
 };
 
-const routeDynamicEvent = (io, socket, event, payload, callback) => {
+const routeDynamicEvent = async (io, socket, event, payload, callback) => {
   let match = event.match(/^\/?app\/chat\.getCard\/([^/]+)$/);
   if (match) {
     emitTopic(io, `/topic/card/${match[1]}`, payload);
@@ -123,6 +157,7 @@ const routeDynamicEvent = (io, socket, event, payload, callback) => {
     const normalizedPayload = normalizeNotificationPayload(payload);
     recordNotification(matchId, normalizedPayload);
     emitTopic(io, `/topic/gameStarted/${matchId}`, normalizedPayload);
+    await emitAuthoritativeGameState(io, matchId);
     ackOk(callback);
     return true;
   }
@@ -244,12 +279,10 @@ const registerSessionWebsocketHandlers = (io, socket) => {
     const callback = typeof args.at(-1) === 'function' ? args.pop() : null;
     const payload = args.length > 0 ? args[0] : undefined;
 
-    try {
-      routeDynamicEvent(io, socket, event, payload, callback);
-    } catch (err) {
+    void routeDynamicEvent(io, socket, event, payload, callback).catch((err) => {
       console.error(`Error handling event ${event}:`, err);
       safeCallback(callback, { status: 'error', reason: err.message });
-    }
+    });
   });
 
   socket.on('disconnect', () => {
