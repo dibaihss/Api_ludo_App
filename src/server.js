@@ -59,8 +59,6 @@ async function startServer() {
     });
 
     io.on('connection', (socket) => {
-      console.log(`Connected: ${socket.id}`);
-
       socket.on('start', async () => {
         try {
           await DataClient.start((message) => io.emit('new_message', message));
@@ -75,8 +73,7 @@ async function startServer() {
       registerSessionWebsocketHandlers(io, socket);
     });
 
-    io.on('error', (_, error) => console.log(`Error: ${error}`));
-    io.on('disconnect', (_, reason) => console.log(`Disconnected: ${reason}`));
+    io.on('error', (_, error) => console.error(`Socket error: ${error}`));
 
     let isShuttingDown = false;
     const shutdown = async (signal) => {

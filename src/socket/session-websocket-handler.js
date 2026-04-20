@@ -142,7 +142,6 @@ const routeDynamicEvent = async (io, socket, event, payload, callback) => {
   }
 
   match = event.match(/^\/?app\/waitingRoom\.gameStarted\/([^/]+)$/);
-  console.log('Received event:', event, 'with payload:', payload);
   if (match) {
     const matchId = match[1];
 
@@ -210,7 +209,6 @@ const registerSessionWebsocketHandlers = (io, socket) => {
     try {
       const payload = rawPayload || {};
       const username = toFirstNonEmptyUsername(payload);
-      console.log('Adding user with payload:', payload);
 
       if (!username) {
         return safeCallback(callback, { status: 'error', reason: 'missing_username' });
@@ -229,8 +227,6 @@ const registerSessionWebsocketHandlers = (io, socket) => {
           sessionId: socket.data.sessionId,
         });
       }
-
-      console.log('socket.data after chatAddUser:', socket.data);
 
       emitTopic(io, '/topic/public', payload);
       safeCallback(callback, {
@@ -307,8 +303,6 @@ const registerSessionWebsocketHandlers = (io, socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('User disconnected - socket.data:', socket.data);
-
     const { sender, userId, sessionId } = socket.data;
 
     if (!sessionId) {
@@ -319,8 +313,6 @@ const registerSessionWebsocketHandlers = (io, socket) => {
       console.warn('Disconnect: sender missing, skipping emit');
       return;
     }
-
-    console.log(`Emitting userDisconnected -> session: ${sessionId}, user: ${sender}`);
 
     emitTopic(io, `/topic/gameStarted/${sessionId}`, {
       sender,

@@ -11,6 +11,7 @@ describe('usersController.guestLogin', () => {
   });
 
   it('returns a JWT token for guest users', async () => {
+    jest.resetModules();
     jest.doMock('../src/models/User', () => ({
       create: jest.fn().mockResolvedValue({
         id: 10,
@@ -30,6 +31,7 @@ describe('usersController.guestLogin', () => {
       jwtAlgorithm: 'HS256'
     }));
 
+    // Require usersController only after all mocks are set up
     const usersController = require('../src/controllers/usersController');
     const req = {};
     const res = makeRes();
