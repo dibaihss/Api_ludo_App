@@ -33,7 +33,7 @@ describe('usersController.guestLogin', () => {
 
     // Require usersController only after all mocks are set up
     const usersController = require('../src/controllers/usersController');
-    const req = {};
+    const req = { body: {} };
     const res = makeRes();
 
     await usersController.guestLogin(req, res);
