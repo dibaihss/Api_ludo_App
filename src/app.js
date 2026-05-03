@@ -27,6 +27,13 @@ app.get('/', (req, res) => {
   res.json({ message: 'Strategic Ludo Game Backend API' });
 });
 
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    service: 'Strategic Ludo Game Backend API'
+  });
+});
+
 app.use('/api', userRoutes);
 app.use('/api', sessionRoutes);
 

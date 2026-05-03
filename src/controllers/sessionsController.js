@@ -1,4 +1,5 @@
 const Session = require('../models/Session');
+const User = require('../models/User');
 const authConfig = require('../config/auth');
 
 const ALLOWED_STATUSES = new Set(['waiting', 'in_progress', 'completed']);
@@ -54,6 +55,11 @@ const sessionsController = {
       }
 
       const ownerUserId = req.user.userId;
+      const ownerUser = await User.findById(ownerUserId);
+      if (!ownerUser) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
       const isGuest = Boolean(req.user.isGuest);
       const activeCap = isGuest
         ? authConfig.sessionActiveCapGuest
